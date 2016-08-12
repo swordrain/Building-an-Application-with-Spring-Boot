@@ -134,6 +134,170 @@ task wrapper(type: Wrapper) {
 [STS](http://spring.io/guides/gs/sts/)  
 [IntelliJ IDEA](http://spring.io/guides/gs/intellij-idea)
 
-##能用Spring Boot做she那么
+##能用Spring Boot做什么
+Spring Boot可以快速搭建应用。它会浏览你的classpath和bean，做出合理的推断，对于缺失的会自动添加进来。有了Spring Boot你可以更专注于业务而不是构架。
 
+##创建一个简单的web应用
+`src/main/java/hello/HelloController.java`
+```
+package hello;
 
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.RequestMapping;
+
+@RestController
+public class HelloController {
+
+    @RequestMapping("/")
+    public String index() {
+        return "Greetings from Spring Boot!";
+    }
+
+}
+```
+`@RestController`注解表示可以被Spring MVC用来处理web请求。`index()`方法用`@RequestMapping`匹配`/`路径。如果有请求到来，就返回一个纯文本。由于`@RestControler`结合了`@Controller`和`ResponseBody`这两个注解，响应返回的是数据而不是视图。
+
+##创建应用class
+`src/main/java/hello/Application.java`
+```
+package hello;
+
+import java.util.Arrays;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.ApplicationContext;
+
+@SpringBootApplication
+public class Application {
+
+    public static void main(String[] args) {
+        ApplicationContext ctx = SpringApplication.run(Application.class, args);
+
+        System.out.println("Let's inspect the beans provided by Spring Boot:");
+
+        String[] beanNames = ctx.getBeanDefinitionNames();
+        Arrays.sort(beanNames);
+        for (String beanName : beanNames) {
+            System.out.println(beanName);
+        }
+    }
+
+}
+```
+`@SpringBootApplication`注解合并了
+* `@Configuration`
+* `@EnableAutoConfiguration`
+* `@EnableWebMvc`
+* `@ComponentScan`
+
+`main()`方法使用Spring Boot的`SpringApplication.run()`来启动应用。主要到这里没有一行的XML了吗，也没有web.xml文件。这个web应用是100%的纯Java，不需要去处理任何配置。
+
+`run()`方法返回了`ApplicationContext`然后应用取出了所有的bean，不论是你自己添加的还是自动被引入的。Spring Boot把它们排序并打印出来。
+
+##运行应用
+如果用的是Gradle，执行  
+`./gradlew build && java -jar build/libs/gs-spring-boot-0.1.0.jar`  
+如果用的是Maven，执行  
+`mvn package && java -jar target/gs-spring-boot-0.1.0.jar`  
+你应该看到如下输出
+```
+Let's inspect the beans provided by Spring Boot:
+application
+beanNameHandlerMapping
+defaultServletHandlerMapping
+dispatcherServlet
+embeddedServletContainerCustomizerBeanPostProcessor
+handlerExceptionResolver
+helloController
+httpRequestHandlerAdapter
+messageSource
+mvcContentNegotiationManager
+mvcConversionService
+mvcValidator
+org.springframework.boot.autoconfigure.MessageSourceAutoConfiguration
+org.springframework.boot.autoconfigure.PropertyPlaceholderAutoConfiguration
+org.springframework.boot.autoconfigure.web.EmbeddedServletContainerAutoConfiguration
+org.springframework.boot.autoconfigure.web.EmbeddedServletContainerAutoConfiguration$DispatcherServletConfiguration
+org.springframework.boot.autoconfigure.web.EmbeddedServletContainerAutoConfiguration$EmbeddedTomcat
+org.springframework.boot.autoconfigure.web.ServerPropertiesAutoConfiguration
+org.springframework.boot.context.embedded.properties.ServerProperties
+org.springframework.context.annotation.ConfigurationClassPostProcessor.enhancedConfigurationProcessor
+org.springframework.context.annotation.ConfigurationClassPostProcessor.importAwareProcessor
+org.springframework.context.annotation.internalAutowiredAnnotationProcessor
+org.springframework.context.annotation.internalCommonAnnotationProcessor
+org.springframework.context.annotation.internalConfigurationAnnotationProcessor
+org.springframework.context.annotation.internalRequiredAnnotationProcessor
+org.springframework.web.servlet.config.annotation.DelegatingWebMvcConfiguration
+propertySourcesBinder
+propertySourcesPlaceholderConfigurer
+requestMappingHandlerAdapter
+requestMappingHandlerMapping
+resourceHandlerMapping
+simpleControllerHandlerAdapter
+tomcatEmbeddedServletContainerFactory
+viewControllerHandlerMapping
+```
+你可以清楚看到org.springframework.boot.autoconfigure。还有`tomcatEmbeddedServletContainerFactory`。  
+检查一下服务  
+```
+$ curl localhost:8080
+Greetings from Spring Boot!
+```
+
+##添加UT
+如果想要添加一些测试，Spring Test已经具备了这些功能，很容易把它导入到你的项目中去
+
+如果使用Gradle，添加如下的依赖
+```
+testCompile("org.springframework.boot:spring-boot-starter-test")
+```
+如果使用Maven，添加
+```
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-test</artifactId>
+    <scope>test</scope>
+</dependency>
+```
+现在写一个简单的单元测试来模拟servlet的request和response
+```
+src/test/java/hello/HelloControllerTest.java
+```
+
+```
+package hello;
+
+import static org.hamcrest.Matchers.equalTo;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.MediaType;
+import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+
+@RunWith(SpringJUnit4ClassRunner.class)
+@SpringBootTest
+public class HelloControllerTest {
+
+	private MockMvc mvc;
+
+	@Before
+	public void setUp() throws Exception {
+		mvc = MockMvcBuilders.standaloneSetup(new HelloController()).build();
+	}
+
+	@Test
+	public void getHello() throws Exception {
+		mvc.perform(MockMvcRequestBuilders.get("/").accept(MediaType.APPLICATION_JSON))
+				.andExpect(status().isOk())
+				.andExpect(content().string(equalTo("Greetings from Spring Boot!")));
+	}
+}
+```

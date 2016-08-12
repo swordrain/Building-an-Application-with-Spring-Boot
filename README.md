@@ -301,3 +301,138 @@ public class HelloControllerTest {
 	}
 }
 ```
+使用了`MockServletContext`来建立了一个空的`WebApplicationContext`，`HelloController`能在`@Before`里创建并传递给`MockMvcBuilders.standaloneSetup()`。另一个替代方案是使用`Application`类创建完整的application context，并`@autowired` `HelloController`到测试里。`MovkMvc`来自于Spring Test可以让你通过一系列的builder类来发送HTTP请求到`DispatcherServlet`然后对结果进行断言。
+除了模拟HTTP请求，也可以使用Spring Boot写一个简单的全栈集成测试。
+```
+src/test/java/hello/HelloControllerIT.java
+```
+```
+package hello;
+
+import static org.hamcrest.Matchers.equalTo;
+import static org.junit.Assert.assertThat;
+
+import java.net.URL;
+
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.springframework.boot.context.embedded.LocalServerPort;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.web.client.TestRestTemplate;
+import org.springframework.http.ResponseEntity;
+import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
+
+@RunWith(SpringJUnit4ClassRunner.class)
+@SpringBootTest(classes = Application.class, webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+public class HelloControllerIT {
+
+    @LocalServerPort
+    private int port;
+
+    private URL base;
+    private TestRestTemplate template;
+
+    @Before
+    public void setUp() throws Exception {
+        this.base = new URL("http://localhost:" + port + "/");
+        template = new TestRestTemplate();
+    }
+
+    @Test
+    public void getHello() throws Exception {
+        ResponseEntity<String> response = template.getForEntity(base.toString(), String.class);
+        assertThat(response.getBody(), equalTo("Greetings from Spring Boot!"));
+    }
+}
+```
+通过`@IntegrationTest("${server.port=0}")`使内置服务器在启动时打开一个随机的端口号，在运行时能用`@Value("${local.server.port}")`检测到
+
+##添加生产级别服务
+如果为你的业务而搭建网站，你可能需要添加一些可管理的服务。Spring Boot在[actuator module](http://docs.spring.io/spring-boot/docs/1.4.0.RELEASE/reference/htmlsingle/#production-ready)外提供了一些模块，比如健康度，审计等。
+
+在Gradle中，添加依赖
+```
+compile("org.springframework.boot:spring-boot-starter-actuator")
+```
+在Maven中，添加依赖
+```
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-actuator</artifactId>
+</dependency>
+```
+如果是Gradle，重启
+```
+./gradlew build && java -jar build/libs/gs-spring-boot-0.1.0.jar
+```
+如果是Maven
+```
+mvn package && java -jar target/gs-spring-boot-0.1.0.jar
+```
+你会看到一系列新的RESTful节点被添加进来，它们是由Spring Boot提供的管理服务。
+```
+2014-06-03 13:23:28.119  ... : Mapped "{[/error],methods=[],params=[],headers=[],consumes...
+2014-06-03 13:23:28.119  ... : Mapped "{[/error],methods=[],params=[],headers=[],consumes...
+2014-06-03 13:23:28.136  ... : Mapped URL path [/**] onto handler of type [class org.spri...
+2014-06-03 13:23:28.136  ... : Mapped URL path [/webjars/**] onto handler of type [class ...
+2014-06-03 13:23:28.440  ... : Mapped "{[/info],methods=[GET],params=[],headers=[],consum...
+2014-06-03 13:23:28.441  ... : Mapped "{[/autoconfig],methods=[GET],params=[],headers=[],...
+2014-06-03 13:23:28.441  ... : Mapped "{[/mappings],methods=[GET],params=[],headers=[],co...
+2014-06-03 13:23:28.442  ... : Mapped "{[/trace],methods=[GET],params=[],headers=[],consu...
+2014-06-03 13:23:28.442  ... : Mapped "{[/env/{name:.*}],methods=[GET],params=[],headers=...
+2014-06-03 13:23:28.442  ... : Mapped "{[/env],methods=[GET],params=[],headers=[],consume...
+2014-06-03 13:23:28.443  ... : Mapped "{[/configprops],methods=[GET],params=[],headers=[]...
+2014-06-03 13:23:28.443  ... : Mapped "{[/metrics/{name:.*}],methods=[GET],params=[],head...
+2014-06-03 13:23:28.443  ... : Mapped "{[/metrics],methods=[GET],params=[],headers=[],con...
+2014-06-03 13:23:28.444  ... : Mapped "{[/health],methods=[GET],params=[],headers=[],cons...
+2014-06-03 13:23:28.444  ... : Mapped "{[/dump],methods=[GET],params=[],headers=[],consum...
+2014-06-03 13:23:28.445  ... : Mapped "{[/beans],methods=[GET],params=[],headers=[],consu...
+```
+检查应用的健康情况就容易了
+```
+$ curl localhost:8080/health
+{"status":"UP"}
+```
+如果尝试通过curl来关闭
+```
+$ curl -X POST localhost:8080/shutdown
+{"timestamp":1401820343710,"error":"Method Not Allowed","status":405,"message":"Request method 'POST' not supported"}
+```
+由于我们没启用，所以该请求被阻止了。
+如果需要更多相关的功能，你可以配置`application.properties`文件，可以参考[docs about the endpoints](http://docs.spring.io/spring-boot/docs/1.4.0.RELEASE/reference/htmlsingle/#production-ready-endpoints)
+
+##查看Spring Boot的初学者文档
+[Spring Boot's starters](http://docs.spring.io/spring-boot/docs/1.4.0.RELEASE/reference/htmlsingle/#using-boot-starter-poms)  
+以及[这里](https://github.com/spring-projects/spring-boot/tree/master/spring-boot-starters)
+
+##JAR支持和Groovy支持
+Spring Boot不止支持传统的war部署，还通过loader module来打包成可执行的JAR。  
+另外Spring Boot还支持Groovy，使你可以仅通过一个文件来创建Spring MVC web应用。  
+创建一个文件取名`app.groovy`
+```
+@RestController
+class ThisWillActuallyRun {
+
+    @RequestMapping("/")
+    String home() {
+        return "Hello World!"
+    }
+
+}
+```
+文件的路径无所谓。
+下一步，[安装Spring Boot's CLI](http://docs.spring.io/spring-boot/docs/1.4.0.RELEASE/reference/htmlsingle/#getting-started-installing-the-cli)
+运行
+```
+$ spring run app.groovy
+```
+在另一个终端窗口运行
+```
+$ curl localhost:8080
+Hello World!
+```
+Spring Boot能动态添加关键注解到你的代码中并拉取必须的库
+
+##总结
+略

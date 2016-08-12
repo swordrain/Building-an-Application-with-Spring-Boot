@@ -1,5 +1,4 @@
-# Building-an-Application-with-Spring-Boot
-[翻译]使用Spring Boot创建应用
+#[翻译]使用Spring Boot创建应用
 
 本文展示如何使用[Spring Boot](https://github.com/spring-projects/spring-boot)来高速便捷进行开发。当你读下去时，你会发现更多的Spring Boot的use case，意味着你快速品尝到了Spring Boot的滋味。如果你想创建一个你自己的基于Spring Boot的项目，可以访问[Spring Initializr](http://start.spring.io/)，填入你的项目信息，做出选择，然后下载Maven的构建文件或者打包后的zip文件。
 
@@ -238,7 +237,7 @@ simpleControllerHandlerAdapter
 tomcatEmbeddedServletContainerFactory
 viewControllerHandlerMapping
 ```
-你可以清楚看到org.springframework.boot.autoconfigure。还有`tomcatEmbeddedServletContainerFactory`。  
+你可以清楚看到有org.springframework.boot.autoconfigure，还有`tomcatEmbeddedServletContainerFactory`。  
 检查一下服务  
 ```
 $ curl localhost:8080
@@ -400,7 +399,7 @@ $ curl -X POST localhost:8080/shutdown
 {"timestamp":1401820343710,"error":"Method Not Allowed","status":405,"message":"Request method 'POST' not supported"}
 ```
 由于我们没启用，所以该请求被阻止了。
-如果需要更多相关的功能，你可以配置`application.properties`文件，可以参考[docs about the endpoints](http://docs.spring.io/spring-boot/docs/1.4.0.RELEASE/reference/htmlsingle/#production-ready-endpoints)
+如果需要更多相关的功能，你可以配置`application.properties`文件，参考[docs about the endpoints](http://docs.spring.io/spring-boot/docs/1.4.0.RELEASE/reference/htmlsingle/#production-ready-endpoints)
 
 ##查看Spring Boot的初学者文档
 [Spring Boot's starters](http://docs.spring.io/spring-boot/docs/1.4.0.RELEASE/reference/htmlsingle/#using-boot-starter-poms)  
